@@ -1,24 +1,30 @@
 from os import path
 from watchdog.observers import Observer
-from watchdog.events.FileSystemEvenHandler import FileSystemEvenHandler
+from watchdog.events import FileSystemEventHandler
 
-class watcher(FileSystemEvenHandler):
+def matcher(line):
+    print(line)
+
+class watcher(FileSystemEventHandler):
     def __init__(self, filename, matcher):
-        self.filename = filename
-        self.path = path.abspath(filename)
+        self.filename = path.abspath(filename)
         self.matcher = matcher
         self.observer = Observer()
         self.fd = None
         self.offset = 0
+        if path.isfile(self.filename):
+            self.fd = open(self.filename)
+            self.offset = path.getsize(self.filename)
 
     def on_created(self,event):
-        if path.isfile(self.path):
-            self.offset  = path.getsize(self.path)
-            self.fd = open(self.path, 'r')
+        print('file appear')
+        if path.isfile(self.filename):
+            self.offset  = path.getsize(self.filename)
+            self.fd = open(self.filename, 'r')
             self.fd.seek(self.offset,0)
 
     def on_deleted(self,event):
-        if event.src == self.path:
+        if event.src_path == self.filename:
             self.fd.closed()
 
     def on_modified(self, event):
@@ -28,18 +34,26 @@ class watcher(FileSystemEvenHandler):
         self.offset = self.fd.tell()
 
     def on_moved(self, event):
-        if event.src_path == self.path:
+        if event.src_path == self.filename:
             self.fd.close()
-        if event.dest_path == self.path:
+
+        if event.dest_path == self.filename:
             self.offset = 0
-            self.fd = open(self.path,'r')
+            self.fd = open(self.filename,'r')
             self.fd.seek(self.offset, 0)
             for line in self.fd:
                 self.matcher(line)
             self.offset = self.fd.tell()
 
     def start(self):
-        self.observer.schedule(self, self.path, recursive=True)
+        self.observer.schedule(self, path.dirname(self.filename), recursive=False)
+        self.observer.start()
 
     def stop(self):
         self.observer.join()
+
+
+if __name__  == '__main__':
+    w = watcher('test1.txt', matcher)
+    w.start()
+    w.stop()
