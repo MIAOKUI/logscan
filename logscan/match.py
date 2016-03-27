@@ -10,6 +10,7 @@ class Token:
         self.value = value
         self.type = type
 
+
 class Node:
     def __init__(self, token):
         self.value = token
@@ -18,8 +19,8 @@ class Node:
 
 
 class ASTree:
-    def __init__(self, Node):
-        self.root = Node
+    def __init__(self, node):
+        self.root = node
         self.left = None
         self.right = None
 
@@ -29,105 +30,95 @@ class ASTree:
     def add_right(self, tree):
         self.right = tree
 
+    def __str__(self):
+        return('tree:{0}:{1}'.format(self.root.type, self.root.value))
+
+    def __repr__(self):
+        return(self.__str__())
+
+    def first_front(self,fn):
+        fn(self.root.value)
+        if self.left:
+            self.left.first_front(fn)
+        if self.right:
+            self.right.first_front(fn)
 
 class Match:
     def __init__(self, exprs):
         self.exprs = exprs
-        self.exprsToken = []
-        self.astTree = None
+        self.exprs_token = []
+        self.astree = None
 
     def tokenizer(self):
         expr = []
         is_expr = False
         for c in self.exprs:
+            if not c.strip():
+                continue
             if c == '(':
-                self.exprsToken.append( Token( c, Token.LEFTBRACKET ) )
+                self.exprs_token.append(Token(c, Token.LEFTBRACKET))
             elif c == ')':
-                self.exprsToken.append( Token( c, Token.RIGHTBRACKET ) )
+                self.exprs_token.append(Token(c, Token.RIGHTBRACKET))
             elif c in '&|':
-                self.exprsToken.append( Token( c, Token.BINARY ) )
+                self.exprs_token.append(Token(c, Token.BINARY))
             elif c == '!':
-                self.exprsToken.append( Token( c, Token.UNARY ) )
+                self.exprs_token.append(Token(c, Token.UNARY))
             elif c == '#':
                 is_expr = not is_expr
+                if not is_expr:
+                    self.exprs_token.append(Token(''.join(expr), Token.PATTEN))
+                    expr = []
             else:
                 if is_expr:
-                    expr.append( c )
-                else:
-                    self.exprsToken.append( Token( ''.join( expr ), Token.PATTEN ) )
-                    expr = []
+                    expr.append(c)
 
-    def make_sub_tree( self, stack, current ):
+    def make_sub_tree(self, stack, current):
         t = current
-        while stack[-1]:
+        while stack and stack[-1].root.type != Token.LEFTBRACKET:
             s = stack.pop()
-            if t.root.type == Token.PATTEN:
-                if s.root.type == Token.BINARY and s.right is None:
-                    s.add_right(t)
-                    stack.append(s)
-                elif s.root.type == Token.UNARY and s.right is None:
-                    s.add_right(t)
-                    stack.append(s)
-                elif s.root.type == Token.LEFTBRACKET:
-                    stack.append(s)
-                    stack.append(t)
-                    break
+            if s.root.type == Token.BINARY:
+                s.add_right(t)
+                if stack[-1].root.type == Token.LEFTBRACKET:
+                    raise Exception('Binary operation without left')
                 else:
-                    raise Exception('Wrong expression')
-            elif t.root.type == Token.RIGHTBRACKET:
-                if stack[-1] and stack[-1].root.type == Token.LEFTBRACKET:
-                    stack.pop()
-                    stack.append(s)
-                else:
-                    raise Exception('Wrong expression: brackets not compatible')
-            elif t.root.type == Token.BINARY:
-                if s.root.type == Token.LEFTBRACKET:
-                    stack.append(s)
-                    stack.append(t)
-                    break
-                elif s.root.type == Token.RIGHTBRACKET:
-                    raise Exception('Wrong expression: brackets are not eliminated')
-                elif s.root.type == Token.BINARY or s.root.type == Token.PATTEN:
-                    t.add_left(s)
-                    stack.append(t)
-                elif s.root.type == Token.UNARY:
-                    s.add_right(t)
-                    stack.append(s)
-                else:
-                    raise  Exception('Wrong expression: unrecognized symbol')
-            elif t.root.type == Token.UNARY:
-                if t.right:
-                    if s.root.type == Token.BINARY and s.right is None:
-                        s.add_right(t)
-                    else:
-                        raise  Exception('Wrong expression: not enough operators')
-                else:
-                    raise Exception('Wrong expression: nothing after unary')
+                    left = stack.pop()
+                    s.add_left(left)
+                    t = s
+            elif s.root.type == Token.UNARY:
+                s.add_right(t)
+                t = s
             else:
-                Exception('Wrong expression')
-            if len(stack) > 1:
-                t = stack.pop()
-            else:
-                break
+                raise Exception('Two continue expression pattern without bool operator')
+        stack.append(t)
 
-    def make_asTree(self):
+
+    def make_astree(self):
         stack = []
-        for token in self.exprsToken:
+        for token in self.exprs_token:
             tree = ASTree(token)
             if tree.root.type == Token.LEFTBRACKET:
                 stack.append(tree)
-            elif tree.root.type == Token.UNARY:
-                stack.append(tree)
-            elif tree.root.type == Token.BINARY:
+            elif tree.root.type == Token.BINARY or tree.root.type == token.UNARY:
                 stack.append(tree)
             elif tree.root.type == Token.PATTEN:
-                self.make_sub_tree(stack,tree)
-            elif tree.root.type == Token.RIGHTBRACKET:
                 self.make_sub_tree(stack, tree)
             else:
-                raise Exception('Wrong expression')
-        self.astTree = stack.pop()
+                subtree = stack.pop()
+                s = stack.pop()
+                if s.root.type == Token.LEFTBRACKET:
+                    self.make_sub_tree(stack, subtree)
+                else:
+                    raise Exception("Wrong expression, brackets not compatible")
+        if len(stack) == 1:
+            self.astree = stack.pop()
+        else:
+            raise Exception('Wrong expression')
 
+if __name__ == '__main__':
+    m = Match('!#e5# & (#e3# | #e2#)|!(#e3# & #e4#)')
+    m.tokenizer()
+    m.make_astree()
+    m.astree.first_front(print)
 
 
 
