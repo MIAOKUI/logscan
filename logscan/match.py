@@ -1,4 +1,5 @@
 # '(#e3# | #e2#) |(!#e3# & #e4#)', 'e1aaaaaae2'
+import re
 class Token:
     LEFTBRACKET = 'LEFTBRACKET'
     RIGHTBRACKET = 'RIGHTBRACKET'
@@ -10,19 +11,20 @@ class Token:
         self.value = value
         self.type = type
 
-
-class Node:
-    def __init__(self, token):
-        self.value = token
-        self.left = None
-        self.right = None
-
-
 class ASTree:
-    def __init__(self, node):
-        self.root = node
+    bool_operator = {
+            '|': lambda left,right: left | right,
+            '&': lambda left,right: left & right,
+            '!': lambda right: not right}
+
+    def __init__(self, token):
+        self.root = token
         self.left = None
         self.right = None
+
+
+    def patten_match(self, line):
+        return(re.search(self.root.value, line) is None)
 
     def add_left(self, tree):
         self.left = tree
@@ -43,7 +45,21 @@ class ASTree:
         if self.right:
             self.right.first_front(fn)
 
-class Match:
+    def astree_match(self,line):
+        if self.root.type == Token.BINARY:
+            left_value =  self.left.astree_match(line)
+            right_value = self.right.astree_match(line)
+            return(ASTree.bool_operator[self.root.value](left_value, right_value))
+        elif self.root.type == Token.UNARY:
+            right_value = self.right.astree_match(line)
+            return(ASTree.bool_operator[self.root.value](right_value))
+        elif self.root.type ==  Token.PATTEN:
+            return(self.patten_match(line))
+        else:
+            raise Exception('Wrong ASTree')
+
+
+class Matcher:
     def __init__(self, exprs):
         self.exprs = exprs
         self.exprs_token = []
@@ -114,12 +130,16 @@ class Match:
         else:
             raise Exception('Wrong expression')
 
+    def match(self,line):
+        return(self.astree.astree_match(line))
+
 if __name__ == '__main__':
-    m = Match('!#e5# & (#e3# | #e2#)|!(#e3# & #e4#)')
+    m = Matcher('!#e5# & (#e3# | #e2#)|!(#e3# & #e4#)')
     m.tokenizer()
     m.make_astree()
-    m.astree.first_front(print)
-
+    line = 'e5afdbsakfsae2'
+    m.match(line)
+    print(m.match(line))
 
 
 

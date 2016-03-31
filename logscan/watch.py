@@ -1,14 +1,15 @@
 from os import path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from count import Counter
+from match import Matcher
 
-def matcher(line):
-    print(line)
-
-class watcher(FileSystemEventHandler):
-    def __init__(self, filename, matcher):
+class Watcher(FileSystemEventHandler):
+    def __init__(self, filename, db_path, exprs, exprs_name):
         self.filename = path.abspath(filename)
-        self.matcher = matcher
+        self.matcher = Matcher(exprs)
+        self.exprs_name = exprs_name
+        self.counter = Counter(db_path)
         self.observer = Observer()
         self.fd = None
         self.offset = 0
@@ -30,7 +31,8 @@ class watcher(FileSystemEventHandler):
     def on_modified(self, event):
         self.fd.seek(self.offset, 0)
         for line in self.fd:
-            self.matcher(line)
+            if self.matcher(line):
+                self.counter.inc(self.exprs_name)
         self.offset = self.fd.tell()
 
     def on_moved(self, event):
@@ -54,6 +56,6 @@ class watcher(FileSystemEventHandler):
 
 
 if __name__  == '__main__':
-    w = watcher('test1.txt', matcher)
+    w = Watcher('test1.txt', matcher)
     w.start()
     w.stop()
