@@ -1,5 +1,6 @@
 import threading
 import logging
+import smtplib
 from queue import Queue, Full
 
 class Message:
@@ -11,8 +12,12 @@ class Message:
             self.type = ['mail',]
         self.type = type
 
-    def __send_mail(self):
-        pass
+    def __send_mail(self, domain, sender, sender_passwd):
+        with smtplib.SMTP(domain) as mail:
+            mail.ehlo()
+            mail.starttls()
+            mail.login(sender, sender_passwd)
+            mail.sendmail(sender, self.users,self.message_text)
 
     def __send_sms(self):
         pass
