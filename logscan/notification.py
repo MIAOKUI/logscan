@@ -36,7 +36,7 @@ class Notification:
 
     def _send(self):
         while not self.__event.is_set:
-            message = self.queue.get()
+            message = self.__message_queue.get()
             message.send()
 
     def send(self):

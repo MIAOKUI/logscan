@@ -5,11 +5,9 @@ from os import path
 
 class Scheduler:
     def __init__(self, db_path):
-        self.matcher = None
         self.counter = Counter(db_path)
         self.watcher = {}
         self.threads = {}
-
 
     def add_watcher(self,filename):
         watcher = Watcher(filename, self.counter)

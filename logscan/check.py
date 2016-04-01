@@ -1,7 +1,6 @@
 import threading
 import logging
 from queue import Queue, Full
-from .count import Counter
 from .notification import Notification, Message
 from .match import Matcher
 
