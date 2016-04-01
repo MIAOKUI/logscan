@@ -39,13 +39,6 @@ class ASTree:
     def __repr__(self):
         return(self.__str__())
 
-    def first_front(self,fn):
-        fn(self.root.value)
-        if self.left:
-            self.left.first_front(fn)
-        if self.right:
-            self.right.first_front(fn)
-
     def astree_match(self,line):
         if self.root.optype == Token.BINARY:
             left_value =  self.left.astree_match(line)
