@@ -3,10 +3,10 @@ import logging
 from queue import Queue, Full
 
 class Message:
-    def __init__(self, users, name, path, type = None):
+    def __init__(self, users, name, text, type = None):
         self.users = users
         self.name = name
-        self.path = path
+        self.message_text = text
         if type is None:
             self.type = ['mail',]
         self.type = type
@@ -28,9 +28,9 @@ class Message:
 
 
 class Notification:
-    def __init__(self, queue):
+    def __init__(self):
         self.message = None
-        self.__message_queue = queue
+        self.__message_queue = Queue()
         self.__event = threading.Event()
         self.__cond = threading.Condition()
 
@@ -50,7 +50,7 @@ class Notification:
                     logging.error('mail queue is full')
 
     def notify(self, message):
-        while self.__cond:
+        with self.__cond:
             self.message = message
             self.__cond.notify_all()
 

@@ -1,16 +1,17 @@
+import logging
 from os import path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from count import Counter
-from match import Matcher
+from queue import Queue, Full
+from .check import CheckerChain
 
 class Watcher(FileSystemEventHandler):
-    def __init__(self, filename, db_path, exprs, exprs_name):
+    def __init__(self, filename, counter):
         self.filename = path.abspath(filename)
-        self.matcher = Matcher(exprs)
-        self.exprs_name = exprs_name
-        self.counter = Counter(db_path)
         self.observer = Observer()
+        self.counter = counter
+        self.queue = Queue(1000)
+        self.checker_chain = CheckerChain(self.queue, self.counter)
         self.fd = None
         self.offset = 0
         if path.isfile(self.filename):
@@ -18,7 +19,6 @@ class Watcher(FileSystemEventHandler):
             self.offset = path.getsize(self.filename)
 
     def on_created(self,event):
-        print('file appear')
         if path.isfile(self.filename):
             self.offset  = path.getsize(self.filename)
             self.fd = open(self.filename, 'r')
@@ -31,8 +31,10 @@ class Watcher(FileSystemEventHandler):
     def on_modified(self, event):
         self.fd.seek(self.offset, 0)
         for line in self.fd:
-            if self.matcher(line):
-                self.counter.inc(self.exprs_name)
+            try:
+                self.queue.put_nowait(line)
+            except Full:
+                logging.error('input queue is full!')
         self.offset = self.fd.tell()
 
     def on_moved(self, event):
@@ -44,15 +46,23 @@ class Watcher(FileSystemEventHandler):
             self.fd = open(self.filename,'r')
             self.fd.seek(self.offset, 0)
             for line in self.fd:
-                self.matcher(line)
+                try:
+                    self.queue.put_nowait(line)
+                except Full:
+                    logging.error('input queue is full')
             self.offset = self.fd.tell()
 
     def start(self):
+        self.checker_chain.start()
         self.observer.schedule(self, path.dirname(self.filename), recursive=False)
         self.observer.start()
+        self.observer.join()
 
     def stop(self):
-        self.observer.join()
+        self.checker_chain.stop()
+        self.observer.stop()
+        if self.fd is not None and not self.fd.closed:
+            self.fd.close()
 
 
 if __name__  == '__main__':
