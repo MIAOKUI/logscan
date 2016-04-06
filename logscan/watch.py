@@ -14,21 +14,29 @@ class Watcher(FileSystemEventHandler):
         self.checker_chain = CheckerChain(self.queue, self.counter)
         self.fd = None
         self.offset = 0
+
+        # If file monitored file exist, open it and moving the cursor to the bottom
         if path.isfile(self.filename):
             self.fd = open(self.filename)
             self.offset = path.getsize(self.filename)
 
-    def on_created(self,event):
-        if path.isfile(self.filename):
-            self.offset  = path.getsize(self.filename)
+    def on_created(self, event):
+        # if the created file is our target file
+        # then open the file and move the cursor to the beginning
+        if event.src_path == self.filename and path.isfile(self.filename):
+            self.offset  = 0
             self.fd = open(self.filename, 'r')
             self.fd.seek(self.offset,0)
 
-    def on_deleted(self,event):
+    def on_deleted(self, event):
+        # if the deleted file is our monitored file
+        # close the file
         if event.src_path == self.filename:
             self.fd.closed()
 
     def on_modified(self, event):
+        # if the modified file is our monitored file
+        # move the cursor to the current offset and read line into queue
         self.fd.seek(self.offset, 0)
         for line in self.fd:
             try:
@@ -38,9 +46,13 @@ class Watcher(FileSystemEventHandler):
         self.offset = self.fd.tell()
 
     def on_moved(self, event):
+        # if our monitored file was moved to other place
+        # then close the file
         if event.src_path == self.filename:
             self.fd.close()
-
+            self.offset = 0
+        # if our monitored file was moved into observed directory
+        # Read from beginning and put lines input queue
         if event.dest_path == self.filename:
             self.offset = 0
             self.fd = open(self.filename,'r')

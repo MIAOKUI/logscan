@@ -9,15 +9,16 @@ class Scheduler:
         self.watcher = {}
         self.threads = {}
 
-    def add_watcher(self,filename):
+    def add_watcher(self, filename):
         watcher = Watcher(filename, self.counter)
-        self.__add_watcher(watcher)
+        self._add_watcher(watcher)
 
-    def __add_watcher(self,watcher):
+    def _add_watcher(self, watcher):
         if watcher.filename not in self.watcher.keys():
             t = threading.Thread(target = watcher.start, name = watcher.name)
             t.daemon = True
             t.start()
+            t.join()
             self.threads[watcher.filename] = t
 
     def remove_watcher(self, filename):
@@ -29,6 +30,6 @@ class Scheduler:
             self.threads.pop(key_name)
 
     def stop(self):
-        while self.watcher.values():
-            for t in self.threads.keys()[:]:
-                t.join()
+        for w in self.watcher.value()[:]:
+            w.stop()
+        self.counter.stop()

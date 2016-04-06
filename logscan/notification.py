@@ -12,22 +12,22 @@ class Message:
             self.type = ['mail',]
         self.type = type
 
-    def __send_mail(self, domain, sender, sender_passwd):
+    def _send_mail(self, domain, sender, sender_passwd):
         with smtplib.SMTP(domain) as mail:
             mail.ehlo()
             mail.starttls()
             mail.login(sender, sender_passwd)
             mail.sendmail(sender, self.users,self.message_text)
 
-    def __send_sms(self):
+    def _send_sms(self):
         pass
 
     def send(self):
         for send_type in self.type:
             if send_type == 'mail':
-                self.__send_mail()
+                self._send_mail()
             elif send_type == 'sms':
-                self.__send_sms()
+                self._send_sms()
             else:
                 raise Exception('Not Including send method {0}'.format(send_type))
 
@@ -60,9 +60,8 @@ class Notification:
             self.__cond.notify_all()
 
     def start(self):
-        while not self.__event.is_set():
-            message = threading.Thread(target = self.send, name = 'send-message')
-            message.start()
+        message = threading.Thread(target = self.send, name = 'send-message')
+        message.start()
 
     def stop(self):
         self.__event.set()

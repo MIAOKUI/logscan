@@ -19,7 +19,9 @@ class Checker:
         self.__event = threading.Event()
 
     def check(self):
+        # start check's notification thread
         threading.Thread(target = self.__notification.start, name = 'notification:{0}'.format(self.name))
+        # begin checking, based on interval
         while not self.__event.is_set():
             self.__event.wait(self.interval)
             count = self.counter.get(self.name)
@@ -31,18 +33,21 @@ class Checker:
                     self.__notification.notify(self.message)
 
     def match(self):
+        # Get each line from check's queue and match to rule, if matched update counter
         while not self.__event.is_set():
             line = self.queue.get()
             if self.__matcher.match(line):
                 self.counter.inc(self.name)
 
     def start(self):
+        # start match match thread and check thread
         threading.Thread(self.match,name = 'checker-match{0}'.format(self.name))
         threading.Thread(self.check, name ='checker-check{0}'.format(self.name))
 
     def stop(self):
         if not self.__event.is_set():
             self.__event.set()
+        self.__notification.stop()
 
 
 class CheckerChain:
@@ -92,5 +97,5 @@ class CheckerChain:
         if not self.__event.is_set():
             self.__event.set()
         for k,e in self.events.values():
-            e.join()
+            e.set()
             self.checkers[k].stop()
