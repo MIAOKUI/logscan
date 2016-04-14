@@ -11,7 +11,6 @@ class Token:
         self.value = value
         self.optype = optype
 
-
 class ASTree:
     bool_operator = {
             '|': lambda left,right: left | right,
@@ -53,7 +52,9 @@ class ASTree:
 
 
 class Matcher:
-    def __init__(self, exprs):
+    def __init__(self, name, order, exprs):
+        self.name = name
+        self.order = order
         self.exprs = exprs
         self.exprs_token = []
         self.astree = None
@@ -128,6 +129,25 @@ class Matcher:
 
     def match(self,line):
         return(self.astree.astree_match(line))
+
+    def __eq__(self, other):
+        if isinstance(other, 'Matcher'):
+            return self.order == other.order
+        else:
+            raise TypeError('Not matcher')
+
+    def __gt__(self, other):
+        if isinstance(other, 'Matcher'):
+            return self.order > other.order
+        else:
+            raise TypeError('Not matcher')
+
+    def __lt__(self, other):
+        if isinstance(other, 'Matcher'):
+            return self.order < other.order
+        else:
+            raise TypeError('Not matcher')
+
 
 if __name__ == '__main__':
     m = Matcher('!#e5# & (#e3# | #e2#)|!(#e3# & #e4#)')

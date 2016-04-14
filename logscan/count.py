@@ -1,29 +1,12 @@
-import shelve
-import threading
-
-
 class Counter:
-    def __init__(self, db_path):
-        self.db_path = db_path
-        self.db = shelve.open(db_path)
-        self.lock = threading.Lock()
-        self.is_stop = False
+    def __init__(self):
+        self.db = {}
 
     def inc(self, name):
-        with self.lock:
-            self.db[name] += 1
+        self.db[name] = self.db.get(name, 0) + 1
 
     def get(self, name):
-        with self.lock:
-            return self.db[name]
+        return self.db.get(name)
 
     def clean(self, name):
-        with self.lock:
-            if name in self.db.keys():
-                self.db[name] = 0
-
-    def stop(self):
-        with self.lock:
-            if not self.is_stop:
-                self.db.sync()
-                self.db.close()
+        self.db.pop(name)

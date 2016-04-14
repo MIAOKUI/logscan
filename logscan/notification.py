@@ -2,42 +2,62 @@ import threading
 import logging
 import smtplib
 from queue import Queue, Full
+import sqlite3
 
-class Message:
-    def __init__(self, users, name, text, type = None):
-        self.users = users
-        self.name = name
-        self.message_text = text
-        if type is None:
-            self.type = ['mail',]
-        self.type = type
+class Sender:
+    def __init__(self, config):
+        self.config = config
 
-    def _send_mail(self, domain, sender, sender_passwd):
-        with smtplib.SMTP(domain) as mail:
-            mail.ehlo()
-            mail.starttls()
-            mail.login(sender, sender_passwd)
-            mail.sendmail(sender, self.users,self.message_text)
-
-    def _send_sms(self):
+    def send_mail(self, message):
         pass
 
-    def send(self):
-        for send_type in self.type:
-            if send_type == 'mail':
-                self._send_mail()
-            elif send_type == 'sms':
-                self._send_sms()
-            else:
-                raise Exception('Not Including send method {0}'.format(send_type))
+    def send_sms(self, message):
+        pass
 
 
-class Notification:
-    def __init__(self):
+class Message:
+    def __init__(self, contacts, name, count, receive_time):
+        self.contacts = contacts
+        self.name = name
+        self.count = count
+        self.receive_time = receive_time
+
+
+
+CREATE_TABALE_DDL = r'''
+CREATE TABLE IF EXISTS NOTIFICATIONS(
+    id             INTEGER          PRIMARY KEY, AUTOINCREMENT,
+    name           STRINGS(128)     NOT NULL,
+    count          BIGINT           NOT NULL,
+    contact        text             NOT NULL,
+    receive_time   DATETIME         NOT NULL,
+    is_send        BOOLEAN          NOT NULL DEFAULT FALSE
+)'''
+
+
+class Notifier:
+    def __init__(self, config):
+        self.config = config
+        self.__sender = Sender(config)
         self.message = None
-        self.__message_queue = Queue()
+        self.__message_queue = Queue(100)
+        self.__semaphore = threading.BoundedSemaphore(int(config['notification']['threads']))
+        self.db = sqlite3.connect(config['notification']['persistance'])
+        self.db.row_factory = sqlite3.Row
+        self.cursor = self.db.cursor()
         self.__event = threading.Event()
-        self.__cond = threading.Condition()
+
+    def notify(self, message):
+        sql = r'INSERT INTO notification (name, count, contact, receive_time) VALUES(?, ?, ?, ?)'
+        try:
+            ret = self.cursor.execute(sql, (message.name,
+                                            message.count,
+                                            message.contact.dumps(),
+                                            message.receive_time))
+            self.db.commit()
+            self.__message_queue.put_nowait(ret.lastrowid)
+        except Full:
+            logging.warning('notification message queue is Full')
 
     def _send(self):
         while not self.__event.is_set:
