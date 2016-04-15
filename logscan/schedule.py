@@ -1,10 +1,10 @@
-from .watch import Watcher
+from .watch import WatcherHandler
 from .count import Counter
 import threading
 from os import path
 
 class Scheduler:
-    def __init__(self, db_path):
+    def __init__(self, db_p):
         self.counter = Counter(db_path)
         self.watcher = {}
         self.threads = {}

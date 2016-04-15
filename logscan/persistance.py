@@ -11,9 +11,9 @@ class OffsetPersistance:
         with self.__lock:
             self.__db[filename] = offset
 
-    def get(self, filename, offset):
+    def get(self, filename):
         with self.__lock:
-            return(self.__db[filename])
+            return(self.__db.get(filename, 0))
 
     def sync(self):
         with self.__lock:
