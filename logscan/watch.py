@@ -3,15 +3,13 @@ from os import path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from queue import Queue, Full
-from .check import CheckerChain
+from .monitor import Monitor
 
 class Watcher(FileSystemEventHandler):
-    def __init__(self, filename, counter):
-        self.filename = path.abspath(filename)
-        self.observer = Observer()
+    def __init__(self, filename, counter, notifier, offset_db, queue_len = 100):
         self.counter = counter
         self.queue = Queue(1000)
-        self.checker_chain = CheckerChain(self.queue, self.counter)
+        self.monitor = Monitor()
         self.fd = None
         self.offset = 0
 

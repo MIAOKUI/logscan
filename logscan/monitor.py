@@ -3,7 +3,7 @@ from queue import Queue, Empty
 from .check import Checker
 from .match import Matcher
 
-class monitor:
+class Monitor:
     def __init__(self, queue, counter, notifier):
         self.queue = queue
         self.checkers = {}
